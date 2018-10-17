@@ -3,8 +3,8 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config"
 set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
 source "$PLUGIN_CORE_AVAILABLE_PATH/common/functions"
 
-solr-pre-build() {
-  declare APP="$1"
+solr-post-extract() {
+  declare APP="$1" TMPDIR="$2"
   local LINKED_SERVICES SERVICE SERVICE_CONTAINER_ID SERVICE_ROOT TMPDIR
 
   LINKED_SERVICES="$(solr-linked-services "$APP")"
@@ -12,11 +12,6 @@ solr-pre-build() {
   if [[ -z $LINKED_SERVICES ]]; then
     return
   fi
-
-  TMPDIR=$(mktemp -d)
-  trap 'rm -rf "$TMP_WORK_DIR" > /dev/null' RETURN
-
-  cd "${TMPDIR}" && git clone -q "${DOKKU_ROOT}/${APP}" repo > /dev/null 2>&1
 
   if [[ -f "${TMPDIR}/repo/solr/schema.xml" ]]; then
     for SERVICE in $LINKED_SERVICES; do
@@ -28,7 +23,7 @@ solr-pre-build() {
       sudo /bin/chgrp 8983 "${SERVICE_ROOT}/data/${SERVICE}/conf/schema.xml"
     done
   fi
- 
+
   if [[ -f "${TMPDIR}/repo/solr/solrconfig.xml" ]]; then
     for SERVICE in $LINKED_SERVICES; do
       dokku_log_info1_quiet "Copying solr/solrconfig.xml to service' conf/solrconfig.xml"
@@ -56,4 +51,4 @@ solr-linked-services() {
   done
 }
 
-solr-pre-build "$1"
+solr-post-extract "$1"
